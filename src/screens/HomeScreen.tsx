@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, FlatList, Modal, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../theme/theme';
 import { useAppStore } from '../store/store';
+import StreakCard from '../components/home/StreakCard';
 
 export default function HomeScreen() {
   const { focusNote, setFocusNote, goals, toggleGoal, addGoal, files, books, playlists } = useAppStore();
@@ -33,6 +34,8 @@ export default function HomeScreen() {
               <Text style={styles.subtitle}>What are you focused on today?</Text>
             </View>
 
+            <StreakCard />
+            
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Today's Focus</Text>
               <TextInput
@@ -74,7 +77,7 @@ export default function HomeScreen() {
                 <Text style={styles.cardLabel}>Quick Access</Text>
                 {pinnedItems.map((item, i) => (
                   <View key={i} style={styles.pinRow}>
-                    <Text style={styles.pinText}>{'title' in item ? item.title : item.name}</Text>
+                    <Text style={styles.pinText}>{'title' in item ? (item as any).title : (item as any).name}</Text>
                   </View>
                 ))}
               </View>

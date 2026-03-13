@@ -41,7 +41,11 @@ interface AppState {
   lockedApps: any[];
   focusNote: string;
   goals: { text: string; done: boolean }[];
+  currentStreak: number;
 
+  resetDailyUsage: () => void;
+  incrementStreak: () => void;
+  resetStreak: () => void;
   updateUsage: (packageName: string, minutes: number) => void;
   checkAndUnlockCooldowns: () => void;
   addFile: (file: VaultFile) => void;
@@ -67,7 +71,18 @@ export const useAppStore = create<AppState>()(
       lockedApps: [],
       focusNote: '',
       goals: [],
+      currentStreak: 0,
 
+      resetDailyUsage: () => set((state) => ({
+      lockedApps: state.lockedApps.map((app) => ({
+      ...app,
+      usedTodayMinutes: 0,
+      isEditUnlocked: new Date() >= new Date(app.cooldownExpiresAt),
+      })),
+      goals: state.goals.map((g) => ({ ...g, done: false })),
+      })),
+      incrementStreak: () => set((state) => ({ currentStreak: state.currentStreak + 1 })),
+      resetStreak: () => set({ currentStreak: 0 }),
       updateUsage: (packageName, minutes) =>
       set((state) => ({
         lockedApps: state.lockedApps.map((a) =>
