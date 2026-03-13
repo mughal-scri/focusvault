@@ -20,10 +20,20 @@ export interface LockConfig {
   packageName: string;
   appName: string;
   dailyLimitMinutes: number;
-  cooldownDays: 14 | 30;
+  cooldownDays: number;
 }
 
+const IS_TESTING = true;
+
+
+const COOLDOWN_OPTIONS = [
+  ...(IS_TESTING ? [{ label: '3 min (Test)', value: 0.002 }] : []),
+  { label: '2 Weeks', value: 14 },
+  { label: '1 Month', value: 30 },
+];
+
 const TIME_OPTIONS = [
+  ...(IS_TESTING ? [{ label: '1 min (Test)', value: 1 }] : []),
   { label: '15 min', value: 15 },
   { label: '30 min', value: 30 },
   { label: '45 min', value: 45 },
@@ -34,7 +44,7 @@ const TIME_OPTIONS = [
 
 export default function LockSetupScreen({ app, onConfirm, onCancel }: Props) {
   const [selectedLimit, setSelectedLimit] = useState<number | null>(null);
-  const [cooldown, setCooldown] = useState<14 | 30>(14);
+  const [cooldown, setCooldown] = useState<number>(14);
   const [confirmed, setConfirmed] = useState(false);
   const holdProgress = useRef(new Animated.Value(0)).current;
   const holdAnimation = useRef<Animated.CompositeAnimation | null>(null);
@@ -114,22 +124,17 @@ export default function LockSetupScreen({ app, onConfirm, onCancel }: Props) {
         How long before you can edit or remove this lock?
       </Text>
       <View style={styles.cooldownRow}>
+        {COOLDOWN_OPTIONS.map((opt) => (
         <TouchableOpacity
-          style={[styles.cooldownBtn, cooldown === 14 && styles.cooldownBtnActive]}
-          onPress={() => setCooldown(14)}
-        >
-          <Text style={[styles.cooldownText, cooldown === 14 && styles.cooldownTextActive]}>
-            2 Weeks
+          key={opt.value}
+          style={[styles.cooldownBtn, cooldown === opt.value && styles.cooldownBtnActive]}
+          onPress={() => setCooldown(opt.value)}
+          >
+          <Text style={[styles.cooldownText, cooldown === opt.value && styles.cooldownTextActive]}>
+          {opt.label}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.cooldownBtn, cooldown === 30 && styles.cooldownBtnActive]}
-          onPress={() => setCooldown(30)}
-        >
-          <Text style={[styles.cooldownText, cooldown === 30 && styles.cooldownTextActive]}>
-            1 Month
-          </Text>
-        </TouchableOpacity>
+        ))}
       </View>
 
       {/* Summary */}
