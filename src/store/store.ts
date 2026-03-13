@@ -42,6 +42,8 @@ interface AppState {
   focusNote: string;
   goals: { text: string; done: boolean }[];
 
+  updateUsage: (packageName: string, minutes: number) => void;
+  checkAndUnlockCooldowns: () => void;
   addFile: (file: VaultFile) => void;
   removeFile: (id: string) => void;
   addBook: (book: Book) => void;
@@ -52,6 +54,8 @@ interface AppState {
   setFocusNote: (note: string) => void;
   toggleGoal: (index: number) => void;
   addGoal: (text: string) => void;
+  addLockedApp: (app: any) => void;
+  removeLockedApp: (packageName: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -64,6 +68,26 @@ export const useAppStore = create<AppState>()(
       focusNote: '',
       goals: [],
 
+      updateUsage: (packageName, minutes) =>
+      set((state) => ({
+        lockedApps: state.lockedApps.map((a) =>
+          a.appPackageName === packageName
+            ? { ...a, usedTodayMinutes: a.usedTodayMinutes + minutes }
+            : a
+        ),
+      })),
+    
+      checkAndUnlockCooldowns: () =>
+      set((state) => ({
+        lockedApps: state.lockedApps.map((a) => ({
+          ...a,
+          isEditUnlocked: new Date() >= new Date(a.cooldownExpiresAt),
+        })),
+      })),
+      addLockedApp: (app) => set((state) => ({ lockedApps: [...state.lockedApps, app] })),
+      removeLockedApp: (packageName) => set((state) => ({
+        lockedApps: state.lockedApps.filter((a) => a.appPackageName !== packageName)
+      })),
       addFile: (file) => set((state) => ({ files: [...state.files, file] })),
       removeFile: (id) => set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
       addBook: (book) => set((state) => ({ books: [...state.books, book] })),
