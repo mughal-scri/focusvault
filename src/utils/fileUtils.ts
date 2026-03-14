@@ -1,6 +1,6 @@
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import { Alert, Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export const saveFilePermanently = async (
   uri: string,
