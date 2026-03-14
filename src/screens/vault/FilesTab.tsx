@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, Alert } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, TouchableOpacity, FlatList,
+  TextInput, StyleSheet, Alert
+} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, fontSize } from '../../theme/theme';
 import { useAppStore } from '../../store/store';
+import { openFile, saveFilePermanently } from '../../utils/fileUtils';
 
 export default function FilesTab() {
   const { files, addFile, removeFile } = useAppStore();
@@ -29,13 +33,12 @@ export default function FilesTab() {
           pptx: 'pptx', ppt: 'pptx',
         };
 
-        // Copy file to app storage so it persists
-        const destUri = file.uri;
+        const permanentUri = await saveFilePermanently(file.uri, file.name);
 
         addFile({
           id: Date.now().toString(),
           name: file.name,
-          localUri: destUri,
+          localUri: permanentUri,
           folder: 'General',
           type: typeMap[ext] || 'other',
           isPinned: false,
@@ -49,9 +52,26 @@ export default function FilesTab() {
     }
   };
 
+  const confirmDelete = (id: string, name: string) => {
+    Alert.alert(
+      'Remove File',
+      `Remove "${name}" from vault?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeFile(id) },
+      ]
+    );
+  };
+
+  const getFileIcon = (type: string) => {
+    const icons: Record<string, string> = {
+      pdf: '📄', docx: '📝', xlsx: '📊', pptx: '📑', other: '📎'
+    };
+    return icons[type] || '📎';
+  };
+
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -66,7 +86,7 @@ export default function FilesTab() {
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>📁</Text>
           <Text style={styles.emptyText}>
-            {search ? 'No files match your search.' : 'No files yet. Add something worth reading.'}
+            {search ? 'No files match your search.' : 'Your library awaits.'}
           </Text>
         </View>
       ) : (
@@ -76,24 +96,35 @@ export default function FilesTab() {
           contentContainerStyle={{ padding: spacing.md }}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <View style={styles.cardLeft}>
-                <Text style={styles.fileIcon}>
-                  {item.type === 'pdf' ? '📄' : item.type === 'docx' ? '📝' : item.type === 'xlsx' ? '📊' : item.type === 'pptx' ? '📑' : '📎'}
-                </Text>
-                <View>
+              <View style={styles.cardTop}>
+                <Text style={styles.fileIcon}>{getFileIcon(item.type)}</Text>
+                <View style={styles.fileInfo}>
                   <Text style={styles.fileName} numberOfLines={1}>{item.name}</Text>
                   <Text style={styles.fileMeta}>{item.type.toUpperCase()} · {item.folder}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => removeFile(item.id)}>
-                <Text style={styles.removeBtn}>✕</Text>
-              </TouchableOpacity>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => openFile(item.localUri)}
+                >
+                  <Text style={styles.actionText}>Open</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.shareBtn]}
+                  onPress={() => openFile(item.localUri)}
+                >
+                  <Text style={styles.actionText}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => confirmDelete(item.id, item.name)}>
+                  <Text style={styles.removeBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         />
       )}
 
-      {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={pickFile}>
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -107,13 +138,18 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: colors.surface, borderRadius: 10, padding: spacing.md, color: colors.textPrimary, fontSize: fontSize.md, borderWidth: 1, borderColor: colors.border },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   emptyIcon: { fontSize: 48 },
-  emptyText: { color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center', paddingHorizontal: spacing.lg },
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  emptyText: { color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center', paddingHorizontal: spacing.lg, fontStyle: 'italic' },
+  card: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 2, borderLeftColor: colors.amber },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   fileIcon: { fontSize: 28 },
-  fileName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: '600', maxWidth: 220 },
+  fileInfo: { flex: 1 },
+  fileName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: '600' },
   fileMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  actionBtn: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.indigo },
+  shareBtn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  actionText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600' },
   removeBtn: { color: colors.destructive, fontSize: 18, paddingLeft: spacing.sm },
-  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' },
-  fabIcon: { color: colors.textPrimary, fontSize: 28, fontWeight: '300' },
+  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, backgroundColor: colors.amber, alignItems: 'center', justifyContent: 'center' },
+  fabIcon: { color: colors.background, fontSize: 28, fontWeight: '300' },
 });
