@@ -21,6 +21,9 @@ interface Book {
   isCompleted: boolean;
   isPinned: boolean;
   addedAt: string;
+  lastReadAt: string | null;
+  lastPage: number | null;
+  totalPages: number | null;
 }
 
 interface Playlist {
@@ -43,6 +46,8 @@ interface AppState {
   goals: { text: string; done: boolean }[];
   currentStreak: number;
 
+  updatePlaylist: (id: string, updates: Partial<any>) => void;
+  updateBook: (id: string, updates: Partial<any>) => void;
   resetDailyUsage: () => void;
   incrementStreak: () => void;
   resetStreak: () => void;
@@ -73,6 +78,12 @@ export const useAppStore = create<AppState>()(
       goals: [],
       currentStreak: 0,
 
+      updatePlaylist: (id, updates) => set((state) => ({
+      playlists: state.playlists.map((p) => p.id === id ? { ...p, ...updates } : p)
+      })),
+      updateBook: (id, updates) => set((state) => ({
+      books: state.books.map((b) => b.id === id ? { ...b, ...updates } : b)
+      })),
       resetDailyUsage: () => set((state) => ({
       lockedApps: state.lockedApps.map((app) => ({
       ...app,
