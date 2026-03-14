@@ -27,7 +27,7 @@ export const openFile = async (uri: string) => {
 
 export const saveFilePermanently = async (uri: string, fileName: string): Promise<string> => {
   try {
-    const destUri = `${FileSystem.documentDirectory}${fileName}`;
+    const destUri = `${(FileSystem as any).documentDirectory ?? ''}${fileName}`;
     const fileInfo = await FileSystem.getInfoAsync(destUri);
     if (!fileInfo.exists) {
       await FileSystem.copyAsync({ from: uri, to: destUri });
