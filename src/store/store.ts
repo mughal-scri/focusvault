@@ -37,34 +37,45 @@ interface Playlist {
   completedAt: string | null;
 }
 
+interface LockedApp {
+  appPackageName: string;
+  appName: string;
+  dailyLimitMinutes: number;
+  usedTodayMinutes: number;
+  lastActiveTimestamp: string | null;
+  isCurrentlyForeground: boolean;
+  lockedAt: string;
+  cooldownDays: number;
+  cooldownExpiresAt: string;
+  isEditUnlocked: boolean;
+}
+
 interface AppState {
   files: VaultFile[];
   books: Book[];
   playlists: Playlist[];
-  lockedApps: any[];
+  lockedApps: LockedApp[];
   focusNote: string;
   goals: { text: string; done: boolean }[];
   currentStreak: number;
 
-  updatePlaylist: (id: string, updates: Partial<any>) => void;
-  updateBook: (id: string, updates: Partial<any>) => void;
-  resetDailyUsage: () => void;
-  incrementStreak: () => void;
-  resetStreak: () => void;
-  updateUsage: (packageName: string, minutes: number) => void;
-  checkAndUnlockCooldowns: () => void;
   addFile: (file: VaultFile) => void;
   removeFile: (id: string) => void;
   addBook: (book: Book) => void;
   removeBook: (id: string) => void;
+  updateBook: (id: string, updates: Partial<Book>) => void;
   addPlaylist: (playlist: Playlist) => void;
   completePlaylist: (id: string) => void;
   removePlaylist: (id: string) => void;
+  updatePlaylist: (id: string, updates: Partial<Playlist>) => void;
+  addLockedApp: (app: LockedApp) => void;
+  removeLockedApp: (packageName: string) => void;
   setFocusNote: (note: string) => void;
   toggleGoal: (index: number) => void;
   addGoal: (text: string) => void;
-  addLockedApp: (app: any) => void;
-  removeLockedApp: (packageName: string) => void;
+  incrementStreak: () => void;
+  resetStreak: () => void;
+  resetDailyUsage: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -78,58 +89,47 @@ export const useAppStore = create<AppState>()(
       goals: [],
       currentStreak: 0,
 
-      updatePlaylist: (id, updates) => set((state) => ({
-      playlists: state.playlists.map((p) => p.id === id ? { ...p, ...updates } : p)
+      addFile: (file) => set((s) => ({ files: [...s.files, file] })),
+      removeFile: (id) => set((s) => ({ files: s.files.filter((f) => f.id !== id) })),
+
+      addBook: (book) => set((s) => ({ books: [...s.books, book] })),
+      removeBook: (id) => set((s) => ({ books: s.books.filter((b) => b.id !== id) })),
+      updateBook: (id, updates) => set((s) => ({
+        books: s.books.map((b) => b.id === id ? { ...b, ...updates } : b)
       })),
-      updateBook: (id, updates) => set((state) => ({
-      books: state.books.map((b) => b.id === id ? { ...b, ...updates } : b)
-      })),
-      resetDailyUsage: () => set((state) => ({
-      lockedApps: state.lockedApps.map((app) => ({
-      ...app,
-      usedTodayMinutes: 0,
-      isEditUnlocked: new Date() >= new Date(app.cooldownExpiresAt),
-      })),
-      goals: state.goals.map((g) => ({ ...g, done: false })),
-      })),
-      incrementStreak: () => set((state) => ({ currentStreak: state.currentStreak + 1 })),
-      resetStreak: () => set({ currentStreak: 0 }),
-      updateUsage: (packageName, minutes) =>
-      set((state) => ({
-        lockedApps: state.lockedApps.map((a) =>
-          a.appPackageName === packageName
-            ? { ...a, usedTodayMinutes: a.usedTodayMinutes + minutes }
-            : a
-        ),
-      })),
-    
-      checkAndUnlockCooldowns: () =>
-      set((state) => ({
-        lockedApps: state.lockedApps.map((a) => ({
-          ...a,
-          isEditUnlocked: new Date() >= new Date(a.cooldownExpiresAt),
-        })),
-      })),
-      addLockedApp: (app) => set((state) => ({ lockedApps: [...state.lockedApps, app] })),
-      removeLockedApp: (packageName) => set((state) => ({
-        lockedApps: state.lockedApps.filter((a) => a.appPackageName !== packageName)
-      })),
-      addFile: (file) => set((state) => ({ files: [...state.files, file] })),
-      removeFile: (id) => set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
-      addBook: (book) => set((state) => ({ books: [...state.books, book] })),
-      removeBook: (id) => set((state) => ({ books: state.books.filter((b) => b.id !== id) })),
-      addPlaylist: (playlist) => set((state) => ({ playlists: [...state.playlists, playlist] })),
-      completePlaylist: (id) => set((state) => ({
-        playlists: state.playlists.map((p) =>
+
+      addPlaylist: (playlist) => set((s) => ({ playlists: [...s.playlists, playlist] })),
+      completePlaylist: (id) => set((s) => ({
+        playlists: s.playlists.map((p) =>
           p.id === id ? { ...p, isCompleted: true, completedAt: new Date().toISOString() } : p
         ),
       })),
-      removePlaylist: (id) => set((state) => ({ playlists: state.playlists.filter((p) => p.id !== id) })),
-      setFocusNote: (note) => set({ focusNote: note }),
-      toggleGoal: (index) => set((state) => ({
-        goals: state.goals.map((g, i) => i === index ? { ...g, done: !g.done } : g),
+      removePlaylist: (id) => set((s) => ({ playlists: s.playlists.filter((p) => p.id !== id) })),
+      updatePlaylist: (id, updates) => set((s) => ({
+        playlists: s.playlists.map((p) => p.id === id ? { ...p, ...updates } : p)
       })),
-      addGoal: (text) => set((state) => ({ goals: [...state.goals, { text, done: false }] })),
+
+      addLockedApp: (app) => set((s) => ({ lockedApps: [...s.lockedApps, app] })),
+      removeLockedApp: (packageName) => set((s) => ({
+        lockedApps: s.lockedApps.filter((a) => a.appPackageName !== packageName)
+      })),
+
+      setFocusNote: (note) => set({ focusNote: note }),
+      toggleGoal: (index) => set((s) => ({
+        goals: s.goals.map((g, i) => i === index ? { ...g, done: !g.done } : g),
+      })),
+      addGoal: (text) => set((s) => ({ goals: [...s.goals, { text, done: false }] })),
+      incrementStreak: () => set((s) => ({ currentStreak: s.currentStreak + 1 })),
+      resetStreak: () => set({ currentStreak: 0 }),
+      resetDailyUsage: () => set((s) => ({
+        lockedApps: s.lockedApps.map((app) => ({
+          ...app,
+          usedTodayMinutes: 0,
+          isEditUnlocked: new Date() >= new Date(app.cooldownExpiresAt),
+        })),
+        goals: s.goals.map((g) => ({ ...g, done: false })),
+        focusNote: '',
+      })),
     }),
     {
       name: 'focusvault-storage',

@@ -14,16 +14,12 @@ export default function App() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const unsub = useAppStore.persist.onFinishHydration(() => {
+    // Manually check hydration with a small delay as fallback
+    const checkHydration = async () => {
+      await useAppStore.persist.rehydrate();
       setHydrated(true);
-    });
-
-    // If already hydrated
-    if (useAppStore.persist.hasHydrated()) {
-      setHydrated(true);
-    }
-
-    return () => unsub();
+    };
+    checkHydration();
   }, []);
 
   if (!hydrated) {
