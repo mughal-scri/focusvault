@@ -28,6 +28,7 @@ export default function AppNavigator() {
             marginBottom: 6,
           },
         }}
+        detachInactiveScreens={false}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Vault" component={VaultScreen} />
