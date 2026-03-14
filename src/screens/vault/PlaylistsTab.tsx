@@ -1,33 +1,86 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, Modal, Linking, StyleSheet } from 'react-native';
-import { colors, spacing, fontSize } from '../../theme/theme';
+import {
+  View, Text, TouchableOpacity, FlatList, TextInput,
+  Modal, Linking, StyleSheet, Alert, Image
+} from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
 
+const getYoutubeThumbnail = (url: string): string | null => {
+  const patterns = [
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/,
+    /youtu\.be\/([a-zA-Z0-9_-]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+  }
+  return null;
+};
+
 export default function PlaylistsTab() {
-  const { playlists, addPlaylist, completePlaylist, removePlaylist } = useAppStore();
-  const [modalVisible, setModalVisible] = useState(false);
+  const { colors } = useTheme();
+  const { playlists, addPlaylist, completePlaylist, removePlaylist, updatePlaylist } = useAppStore();
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
+  const [renameText, setRenameText] = useState('');
 
   const handleAdd = () => {
     if (!title.trim() || !url.trim()) return;
+    const thumbnail = getYoutubeThumbnail(url.trim());
     addPlaylist({
       id: Date.now().toString(),
       title: title.trim(),
       youtubeUrl: url.trim(),
-      thumbnailUrl: null,
+      thumbnailUrl: thumbnail,
       isCompleted: false,
       isPinned: false,
       addedAt: new Date().toISOString(),
       completedAt: null,
     });
-    setTitle('');
-    setUrl('');
-    setModalVisible(false);
+    setTitle(''); setUrl('');
+    setAddModalVisible(false);
+  };
+
+  const handleRename = () => {
+    if (!renameText.trim() || !selectedId) return;
+    updatePlaylist(selectedId, { title: renameText.trim() });
+    setRenameText(''); setSelectedId(null);
+    setRenameModalVisible(false);
+  };
+
+  const openRenameModal = (id: string, currentTitle: string) => {
+    setSelectedId(id);
+    setRenameText(currentTitle);
+    setRenameModalVisible(true);
   };
 
   const openPlaylist = (url: string) => {
-    Linking.openURL(url).catch(() => console.error('Could not open URL'));
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open URL.'));
+  };
+
+  const sharePlaylist = async (url: string, title: string) => {
+    try {
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(url, { dialogTitle: `Share: ${title}` });
+      } else {
+        Alert.alert('Share', `${title}\n${url}`);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not share playlist.');
+    }
+  };
+
+  const confirmRemove = (id: string) => {
+    Alert.alert('Remove Playlist', 'Remove this playlist from vault?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removePlaylist(id) },
+    ]);
   };
 
   const active = playlists.filter((p) => !p.isCompleted);
@@ -38,40 +91,75 @@ export default function PlaylistsTab() {
       {playlists.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>🎬</Text>
-          <Text style={styles.emptyText}>No playlists yet. Add one worth watching.</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            Knowledge is the only wealth that grows when shared.
+          </Text>
         </View>
       ) : (
         <FlatList
           data={[...active, ...completed]}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: spacing.md }}
+          contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
-            <View style={[styles.card, item.isCompleted && styles.completedCard]}>
-              <Text style={styles.playlistTitle}>{item.title}</Text>
-              <Text style={styles.playlistUrl} numberOfLines={1}>{item.youtubeUrl}</Text>
-              {item.isCompleted && (
-                <Text style={styles.completedLabel}>✓ Completed</Text>
-              )}
+            <View style={[
+              styles.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderLeftColor: colors.amber,
+                opacity: item.isCompleted ? 0.6 : 1,
+              }
+            ]}>
+              <View style={styles.cardTop}>
+                {item.thumbnailUrl ? (
+                  <Image source={{ uri: item.thumbnailUrl }} style={styles.thumbnail} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.thumbnailFallback, { backgroundColor: colors.border }]}>
+                    <Text style={styles.thumbnailIcon}>▶️</Text>
+                  </View>
+                )}
+                <View style={styles.playlistInfo}>
+                  <Text style={[styles.playlistTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.playlistUrl, { color: colors.textMuted }]} numberOfLines={1}>
+                    {item.youtubeUrl}
+                  </Text>
+                  {item.isCompleted && (
+                    <Text style={[styles.completedLabel, { color: colors.success }]}>✓ Completed</Text>
+                  )}
+                </View>
+              </View>
+
               <View style={styles.actions}>
                 <TouchableOpacity
-                  style={styles.actionBtn}
+                  style={[styles.actionBtn, { backgroundColor: colors.indigo }]}
                   onPress={() => openPlaylist(item.youtubeUrl)}
                 >
-                  <Text style={styles.actionBtnText}>Open</Text>
+                  <Text style={styles.actionText}>Open</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                  onPress={() => openRenameModal(item.id, item.title)}
+                >
+                  <Text style={[styles.actionText, { color: colors.textPrimary }]}>Rename</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                  onPress={() => sharePlaylist(item.youtubeUrl, item.title)}
+                >
+                  <Text style={[styles.actionText, { color: colors.textPrimary }]}>Share</Text>
                 </TouchableOpacity>
                 {!item.isCompleted && (
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.successBtn]}
+                    style={[styles.actionBtn, { backgroundColor: colors.success }]}
                     onPress={() => completePlaylist(item.id)}
                   >
-                    <Text style={styles.actionBtnText}>Completed</Text>
+                    <Text style={styles.actionText}>Done</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.dangerBtn]}
-                  onPress={() => removePlaylist(item.id)}
-                >
-                  <Text style={styles.actionBtnText}>Remove</Text>
+                <TouchableOpacity onPress={() => confirmRemove(item.id)}>
+                  <Text style={[styles.removeBtn, { color: colors.destructive }]}>✕</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -79,38 +167,72 @@ export default function PlaylistsTab() {
         />
       )}
 
-      {/* Add Playlist Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
+      {/* Add Modal */}
+      <Modal visible={addModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Add Playlist</Text>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add Playlist</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary }]}
               placeholder="Playlist title *"
               placeholderTextColor={colors.textMuted}
               value={title}
               onChangeText={setTitle}
             />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary }]}
               placeholder="YouTube URL *"
               placeholderTextColor={colors.textMuted}
               value={url}
               onChangeText={setUrl}
               autoCapitalize="none"
             />
-            <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.indigo }]} onPress={handleAdd}>
               <Text style={styles.addButtonText}>Add Playlist</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setAddModalVisible(false)}>
+              <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
+      {/* Rename Modal */}
+      <Modal visible={renameModalVisible} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={[styles.renameBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Rename Playlist</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary }]}
+              placeholder="New title"
+              placeholderTextColor={colors.textMuted}
+              value={renameText}
+              onChangeText={setRenameText}
+              autoFocus
+            />
+            <View style={styles.renameActions}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                onPress={() => setRenameModalVisible(false)}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: colors.indigo }]}
+                onPress={handleRename}
+              >
+                <Text style={styles.confirmBtnText}>Rename</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.indigo }]}
+        onPress={() => setAddModalVisible(true)}
+      >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
     </View>
@@ -119,27 +241,37 @@ export default function PlaylistsTab() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyIcon: { fontSize: 48 },
-  emptyText: { color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center', paddingHorizontal: spacing.lg },
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  completedCard: { opacity: 0.6 },
-  playlistTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: '600' },
-  playlistUrl: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 4 },
-  completedLabel: { color: colors.success, fontSize: fontSize.sm, fontWeight: '600', marginTop: 6 },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  actionBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.indigo },
-  successBtn: { backgroundColor: colors.success },
-  dangerBtn: { backgroundColor: colors.destructive },
-  actionBtnText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600' },
+  emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 32, fontStyle: 'italic' },
+  card: { borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderLeftWidth: 3 },
+  cardTop: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  thumbnail: { width: 80, height: 56, borderRadius: 8 },
+  thumbnailFallback: { width: 80, height: 56, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  thumbnailIcon: { fontSize: 24 },
+  playlistInfo: { flex: 1 },
+  playlistTitle: { fontSize: 15, fontWeight: '600' },
+  playlistUrl: { fontSize: 13, marginTop: 2 },
+  completedLabel: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  actionBtn: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999 },
+  actionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  removeBtn: { fontSize: 18, paddingLeft: 6 },
   modalOverlay: { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, gap: spacing.sm },
-  modalTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: 'bold', marginBottom: spacing.sm },
-  input: { backgroundColor: colors.background, borderRadius: 10, padding: spacing.md, color: colors.textPrimary, fontSize: fontSize.md, borderWidth: 1, borderColor: colors.border },
-  addButton: { backgroundColor: colors.indigo, borderRadius: 10, padding: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  addButtonText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: 'bold' },
-  cancelButton: { padding: spacing.md, alignItems: 'center' },
-  cancelButtonText: { color: colors.textMuted, fontSize: fontSize.md },
-  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' },
-  fabIcon: { color: colors.textPrimary, fontSize: 28, fontWeight: '300' },
+  modalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 10 },
+  centeredOverlay: { flex: 1, backgroundColor: '#00000099', alignItems: 'center', justifyContent: 'center' },
+  renameBox: { borderRadius: 16, padding: 24, width: '85%', borderWidth: 1, gap: 12 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+  input: { borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1 },
+  addButton: { borderRadius: 10, padding: 14, alignItems: 'center' },
+  addButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
+  cancelButton: { padding: 14, alignItems: 'center' },
+  cancelButtonText: { fontSize: 15 },
+  renameActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  cancelBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1 },
+  cancelBtnText: { fontSize: 15 },
+  confirmBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+  confirmBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  fabIcon: { color: '#FFFFFF', fontSize: 28, fontWeight: '300' },
 });

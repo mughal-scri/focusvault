@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, fontSize } from '../../theme/theme';
+import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
 
 export default function StreakCard() {
+  const { colors } = useTheme();
   const { lockedApps, currentStreak } = useAppStore();
 
   const allUnderLimit = lockedApps.every(
@@ -20,21 +21,27 @@ export default function StreakCard() {
   };
 
   return (
-    <View style={styles.card}>
-      {/* Streak */}
+    <View style={[styles.card, {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderLeftColor: colors.indigo,
+    }]}>
+      {/* Streak Row */}
       <View style={styles.streakRow}>
         <View style={styles.streakLeft}>
           <Text style={styles.streakIcon}>🔥</Text>
           <View>
-            <Text style={styles.streakNumber}>{currentStreak ?? 0}</Text>
-            <Text style={styles.streakLabel}>day streak</Text>
+            <Text style={[styles.streakNumber, { color: colors.textPrimary }]}>
+              {currentStreak ?? 0}
+            </Text>
+            <Text style={[styles.streakLabel, { color: colors.textMuted }]}>
+              day streak
+            </Text>
           </View>
         </View>
-
-        {/* Status */}
         <View style={[
           styles.statusBadge,
-          { backgroundColor: allUnderLimit ? '#0d2e1f' : '#2e0d0d' }
+          { backgroundColor: allUnderLimit ? colors.success + '20' : colors.destructive + '20' }
         ]}>
           <Text style={[
             styles.statusText,
@@ -45,7 +52,7 @@ export default function StreakCard() {
         </View>
       </View>
 
-      {/* Active Locks Strip */}
+      {/* Active Locks */}
       {lockedApps.length > 0 && (
         <View style={styles.locksStrip}>
           {lockedApps.map((app) => {
@@ -56,21 +63,22 @@ export default function StreakCard() {
             return (
               <View key={app.appPackageName} style={styles.lockItem}>
                 <View style={styles.lockItemTop}>
-                  <Text style={styles.lockAppName} numberOfLines={1}>
+                  <Text style={[styles.lockAppName, { color: colors.textPrimary }]} numberOfLines={1}>
                     {app.appName}
                   </Text>
-                  <Text style={[
-                    styles.lockUsage,
-                    { color: isOver ? colors.destructive : colors.textMuted }
-                  ]}>
+                  <Text style={[styles.lockUsage, {
+                    color: isOver ? colors.destructive : colors.textMuted
+                  }]}>
                     {app.usedTodayMinutes}/{app.dailyLimitMinutes}m
                   </Text>
                 </View>
-                <View style={styles.miniProgressBar}>
+                <View style={[styles.miniProgressBar, { backgroundColor: colors.border }]}>
                   <View style={[
                     styles.miniProgressFill,
-                    { width: `${percent}%` },
-                    isOver && { backgroundColor: colors.destructive }
+                    {
+                      width: `${percent}%` as any,
+                      backgroundColor: isOver ? colors.destructive : colors.indigo,
+                    }
                   ]} />
                 </View>
               </View>
@@ -80,8 +88,8 @@ export default function StreakCard() {
       )}
 
       {/* Midnight Reset */}
-      <View style={styles.resetRow}>
-        <Text style={styles.resetText}>
+      <View style={[styles.resetRow, { borderTopColor: colors.border }]}>
+        <Text style={[styles.resetText, { color: colors.textMuted }]}>
           🕛 Resets in {getMidnightCountdown()}
         </Text>
       </View>
@@ -90,21 +98,21 @@ export default function StreakCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginHorizontal: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  streakRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  streakLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  card: { borderRadius: 12, padding: 14, marginHorizontal: 20, marginBottom: 8, borderWidth: 1, borderLeftWidth: 3 },
+  streakRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  streakLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   streakIcon: { fontSize: 32 },
-  streakNumber: { color: colors.textPrimary, fontSize: 28, fontWeight: 'bold', lineHeight: 32 },
-  streakLabel: { color: colors.textMuted, fontSize: fontSize.sm },
+  streakNumber: { fontSize: 28, fontWeight: 'bold', lineHeight: 32 },
+  streakLabel: { fontSize: 13 },
   statusBadge: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
-  statusText: { fontSize: fontSize.sm, fontWeight: '600' },
-  locksStrip: { gap: 8, marginBottom: spacing.sm },
+  statusText: { fontSize: 13, fontWeight: '600' },
+  locksStrip: { gap: 8, marginBottom: 10 },
   lockItem: { gap: 4 },
   lockItemTop: { flexDirection: 'row', justifyContent: 'space-between' },
-  lockAppName: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600', flex: 1 },
-  lockUsage: { fontSize: fontSize.sm },
-  miniProgressBar: { height: 4, backgroundColor: colors.border, borderRadius: 999, overflow: 'hidden' },
-  miniProgressFill: { height: '100%', backgroundColor: colors.indigo, borderRadius: 999 },
-  resetRow: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
-  resetText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center' },
+  lockAppName: { fontSize: 13, fontWeight: '600', flex: 1 },
+  lockUsage: { fontSize: 13 },
+  miniProgressBar: { height: 4, borderRadius: 999, overflow: 'hidden' },
+  miniProgressFill: { height: '100%', borderRadius: 999 },
+  resetRow: { borderTopWidth: 1, paddingTop: 10 },
+  resetText: { fontSize: 13, textAlign: 'center' },
 });

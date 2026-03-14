@@ -58,7 +58,9 @@ interface AppState {
   focusNote: string;
   goals: { text: string; done: boolean }[];
   currentStreak: number;
+  userProfile: { name: string; age: number | null } | null;
 
+  setUserProfile: (profile: { name: string; age: number | null }) => void;
   addFile: (file: VaultFile) => void;
   removeFile: (id: string) => void;
   addBook: (book: Book) => void;
@@ -89,6 +91,9 @@ export const useAppStore = create<AppState>()(
       goals: [],
       currentStreak: 0,
 
+      userProfile: null,
+      setUserProfile: (profile) => set({ userProfile: profile }),
+      
       addFile: (file) => set((s) => ({ files: [...s.files, file] })),
       removeFile: (id) => set((s) => ({ files: s.files.filter((f) => f.id !== id) })),
 

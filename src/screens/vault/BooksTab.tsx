@@ -1,10 +1,11 @@
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, spacing, fontSize } from '../../theme/theme';
+import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
 import { openFile, saveFilePermanently } from '../../utils/fileUtils';
 
 export default function BooksTab() {
+  const { colors } = useTheme();
   const { books, addBook, removeBook, updateBook } = useAppStore();
 
   const pickBook = async () => {
@@ -19,11 +20,9 @@ export default function BooksTab() {
         copyToCacheDirectory: true,
         multiple: false,
       });
-
       if (!result.canceled && result.assets[0]) {
         const file = result.assets[0];
         const permanentUri = await saveFilePermanently(file.uri, file.name);
-
         addBook({
           id: Date.now().toString(),
           fileUri: permanentUri,
@@ -36,8 +35,8 @@ export default function BooksTab() {
           totalPages: null,
         });
       }
-    } catch (error) {
-      Alert.alert('Error', 'Could not add book. Please try again.');
+    } catch {
+      Alert.alert('Error', 'Could not add book.');
     }
   };
 
@@ -47,31 +46,23 @@ export default function BooksTab() {
   };
 
   const markComplete = (id: string) => {
-    Alert.alert(
-      'Mark as Completed',
-      'Have you finished reading this book?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, Completed!',
-          onPress: () => updateBook(id, {
-            isCompleted: true,
-            lastReadAt: new Date().toISOString(),
-          })
-        },
-      ]
-    );
+    Alert.alert('Mark as Completed', 'Have you finished reading this book?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes, Completed!',
+        onPress: () => updateBook(id, {
+          isCompleted: true,
+          lastReadAt: new Date().toISOString(),
+        }),
+      },
+    ]);
   };
 
   const confirmDelete = (id: string, name: string) => {
-    Alert.alert(
-      'Remove Book',
-      `Remove "${name}" from vault?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeBook(id) },
-      ]
-    );
+    Alert.alert('Remove Book', `Remove "${name}" from vault?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeBook(id) },
+    ]);
   };
 
   const getLastReadLabel = (lastReadAt: string | null) => {
@@ -87,7 +78,7 @@ export default function BooksTab() {
       {books.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>📚</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
             A mind without books is like a room without windows.
           </Text>
         </View>
@@ -95,28 +86,41 @@ export default function BooksTab() {
         <FlatList
           data={books}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: spacing.md }}
+          contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
-            <View style={[styles.card, item.isCompleted && styles.completedCard]}>
+            <View style={[
+              styles.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderLeftColor: colors.amber,
+                opacity: item.isCompleted ? 0.6 : 1,
+              }
+            ]}>
               <View style={styles.cardTop}>
                 <Text style={styles.bookIcon}>📖</Text>
                 <View style={styles.bookInfo}>
-                  <Text style={styles.bookName} numberOfLines={2}>{item.fileName}</Text>
-                  <Text style={styles.lastRead}>
+                  <Text style={[styles.bookName, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {item.fileName}
+                  </Text>
+                  <Text style={[styles.lastRead, { color: item.isCompleted ? colors.success : colors.textMuted }]}>
                     {item.isCompleted ? '✓ Completed' : getLastReadLabel(item.lastReadAt)}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => confirmDelete(item.id, item.fileName)}>
-                  <Text style={styles.removeBtn}>✕</Text>
+                  <Text style={[styles.removeBtn, { color: colors.destructive }]}>✕</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => openBook(item)}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.indigo }]}
+                  onPress={() => openBook(item)}
+                >
                   <Text style={styles.actionText}>Open</Text>
                 </TouchableOpacity>
                 {!item.isCompleted && (
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.successBtn]}
+                    style={[styles.actionBtn, { backgroundColor: colors.success }]}
                     onPress={() => markComplete(item.id)}
                   >
                     <Text style={styles.actionText}>Mark Complete</Text>
@@ -128,7 +132,10 @@ export default function BooksTab() {
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={pickBook}>
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.amber }]}
+        onPress={pickBook}
+      >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
     </View>
@@ -137,21 +144,19 @@ export default function BooksTab() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyIcon: { fontSize: 48 },
-  emptyText: { color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center', paddingHorizontal: spacing.lg, fontStyle: 'italic' },
-  card: { backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 2, borderLeftColor: colors.amber },
-  completedCard: { opacity: 0.6 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 32, fontStyle: 'italic' },
+  card: { borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderLeftWidth: 3 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   bookIcon: { fontSize: 28 },
   bookInfo: { flex: 1 },
-  bookName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: '600' },
-  lastRead: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
-  removeBtn: { color: colors.destructive, fontSize: 18 },
-  actions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.indigo },
-  successBtn: { backgroundColor: colors.success },
-  actionText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: '600' },
-  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, backgroundColor: colors.amber, alignItems: 'center', justifyContent: 'center' },
-  fabIcon: { color: colors.background, fontSize: 28, fontWeight: '300' },
+  bookName: { fontSize: 15, fontWeight: '600' },
+  lastRead: { fontSize: 13, marginTop: 2 },
+  removeBtn: { fontSize: 18 },
+  actions: { flexDirection: 'row', gap: 8 },
+  actionBtn: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999 },
+  actionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  fabIcon: { color: '#0A0A0F', fontSize: 28, fontWeight: '300' },
 });
