@@ -57,50 +57,66 @@ export default function FilesTab() {
     ]);
   };
 
-  const getFileIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      pdf: '📄', docx: '📝', xlsx: '📊', pptx: '📑', other: '📎'
+  const getFileConfig = (type: string) => {
+    const config: Record<string, { icon: string; color: string }> = {
+      pdf: { icon: '📄', color: '#EF4444' },
+      docx: { icon: '📝', color: '#3B82F6' },
+      xlsx: { icon: '📊', color: '#10B981' },
+      pptx: { icon: '📑', color: '#F59E0B' },
+      other: { icon: '📎', color: '#6366F1' },
     };
-    return icons[type] || '📎';
+    return config[type] || config.other;
   };
 
   return (
     <View style={styles.container}>
       {/* Search */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={[styles.searchInput, {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            color: colors.textPrimary,
-          }]}
-          placeholder="Search files..."
-          placeholderTextColor={colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-        />
+      <View style={[styles.searchWrapper, { backgroundColor: colors.background }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={[styles.searchInput, { color: colors.textPrimary }]}
+            placeholder="Search files..."
+            placeholderTextColor={colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Text style={[styles.clearBtn, { color: colors.textMuted }]}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📁</Text>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {search ? 'No files match your search.' : 'Your library awaits.'}
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={styles.emptyIcon}>📁</Text>
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+            {search ? 'No results found' : 'Your library awaits'}
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
+            {search ? `No files matching "${search}"` : 'Add files from your device to get started'}
           </Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16 }}
-          renderItem={({ item }) => (
-            <View style={[styles.card, {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderLeftColor: colors.amber,
-            }]}>
-              <View style={styles.cardTop}>
-                <Text style={styles.fileIcon}>{getFileIcon(item.type)}</Text>
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            const config = getFileConfig(item.type);
+            return (
+              <View style={[styles.card, {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              }]}>
+                <View style={[styles.fileIconContainer, { backgroundColor: config.color + '15' }]}>
+                  <Text style={styles.fileIcon}>{config.icon}</Text>
+                </View>
                 <View style={styles.fileInfo}>
                   <Text style={[styles.fileName, { color: colors.textPrimary }]} numberOfLines={1}>
                     {item.name}
@@ -109,30 +125,23 @@ export default function FilesTab() {
                     {item.type.toUpperCase()} · {item.folder}
                   </Text>
                 </View>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: colors.indigo + '15' }]}
+                    onPress={() => openFile(item.localUri)}
+                  >
+                    <Text style={styles.iconBtnText}>↗</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: colors.destructive + '15' }]}
+                    onPress={() => confirmDelete(item.id, item.name)}
+                  >
+                    <Text style={[styles.iconBtnText, { color: colors.destructive }]}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.indigo }]}
-                  onPress={() => openFile(item.localUri)}
-                >
-                  <Text style={styles.actionText}>Open</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtn, {
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }]}
-                  onPress={() => openFile(item.localUri)}
-                >
-                  <Text style={[styles.actionText, { color: colors.textPrimary }]}>Share</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => confirmDelete(item.id, item.name)}>
-                  <Text style={[styles.removeBtn, { color: colors.destructive }]}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
 
@@ -140,6 +149,7 @@ export default function FilesTab() {
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.amber }]}
         onPress={pickFile}
+        activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -149,21 +159,76 @@ export default function FilesTab() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchContainer: { paddingHorizontal: 16, paddingVertical: 8 },
-  searchInput: { borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyIcon: { fontSize: 48 },
-  emptyText: { fontSize: 15, textAlign: 'center', paddingHorizontal: 32, fontStyle: 'italic' },
-  card: { borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderLeftWidth: 3 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  fileIcon: { fontSize: 28 },
+  searchWrapper: { padding: 16, paddingBottom: 8 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    gap: 8,
+  },
+  searchIcon: { fontSize: 16 },
+  searchInput: { flex: 1, fontSize: 15 },
+  clearBtn: { fontSize: 16, padding: 4 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  emptyIcon: { fontSize: 36 },
+  emptyTitle: { fontSize: 18, fontWeight: '700' },
+  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  list: { padding: 16, paddingBottom: 100 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    gap: 12,
+    minHeight: 72,
+  },
+  fileIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fileIcon: { fontSize: 22 },
   fileInfo: { flex: 1 },
-  fileName: { fontSize: 15, fontWeight: '600' },
+  fileName: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
   fileMeta: { fontSize: 13, marginTop: 2 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  actionBtn: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999 },
-  actionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  removeBtn: { fontSize: 18, paddingLeft: 8 },
-  fab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  cardActions: { flexDirection: 'row', gap: 8 },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnText: { fontSize: 16, fontWeight: '700', color: '#6366F1' },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
   fabIcon: { color: '#0A0A0F', fontSize: 28, fontWeight: '300' },
 });

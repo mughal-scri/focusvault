@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../theme/ThemeContext';
@@ -10,14 +12,27 @@ import SettingsScreen from '../screens/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS: Record<string, string> = {
-  Home: '🏠',
-  Vault: '🗂',
-  Locker: '🔒',
-  Settings: '⚙️',
+  Home: '🏠', Vault: '🗂', Locker: '🔒', Settings: '⚙️',
 };
 
 export default function AppNavigator() {
   const { colors, isDark } = useTheme();
+  const [isReady, setIsReady] = useState(false);
+  const [initialState, setInitialState] = useState();
+
+  useEffect(() => {
+    const restoreState = async () => {
+      try {
+        const savedState = await AsyncStorage.getItem('nav-state');
+        if (savedState) setInitialState(JSON.parse(savedState));
+      } finally {
+        setIsReady(true);
+      }
+    };
+    restoreState();
+  }, []);
+
+  if (!isReady) return null;
 
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
@@ -31,7 +46,13 @@ export default function AppNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      theme={navTheme}
+      initialState={initialState}
+      onStateChange={(state) =>
+        AsyncStorage.setItem('nav-state', JSON.stringify(state))
+      }
+    >
       <Tab.Navigator
         detachInactiveScreens={false}
         screenOptions={({ route }) => ({
@@ -67,11 +88,7 @@ export default function AppNavigator() {
               {focused && (
                 <View style={[
                   styles.activeIndicator,
-                  {
-                    backgroundColor: route.name === 'Vault'
-                      ? colors.amber
-                      : colors.indigo,
-                  }
+                  { backgroundColor: route.name === 'Vault' ? colors.amber : colors.indigo }
                 ]} />
               )}
             </View>
@@ -93,7 +110,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
     height: 32,
-    position: 'relative',
   },
   tabIcon: { fontSize: 20 },
   activeIndicator: {

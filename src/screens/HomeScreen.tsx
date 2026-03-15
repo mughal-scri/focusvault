@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
-  FlatList, Modal, StyleSheet
+  FlatList, Modal, StyleSheet, Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/store';
 import StreakCard from '../components/home/StreakCard';
 
+const { width } = Dimensions.get('window');
+
 export default function HomeScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const {
     focusNote, setFocusNote, goals, toggleGoal,
     addGoal, files, books, playlists, userProfile
@@ -37,20 +40,24 @@ export default function HomeScreen() {
   ].slice(0, 4);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <FlatList
         data={goals}
         keyExtractor={(_, i) => i.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         ListHeaderComponent={
           <>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={[styles.greeting, { color: colors.textPrimary }]}>
-                {getGreeting()}{userProfile?.name ? `, ${userProfile.name}` : ''} 👋
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                What are you focused on today?
-              </Text>
+              <View>
+                <Text style={[styles.greeting, { color: colors.textPrimary }]}>
+                  {getGreeting()}{userProfile?.name ? `, ${userProfile.name}` : ''} 👋
+                </Text>
+                <Text style={[styles.date, { color: colors.textMuted }]}>
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </Text>
+              </View>
             </View>
 
             {/* Streak Card */}
@@ -62,11 +69,20 @@ export default function HomeScreen() {
               borderColor: colors.border,
               borderLeftColor: colors.amber,
             }]}>
-              <Text style={[styles.cardLabel, { color: colors.amber }]}>
-                Today's Focus
-              </Text>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
+                  <Text style={styles.cardIcon}>✏️</Text>
+                </View>
+                <Text style={[styles.cardLabel, { color: colors.amber }]}>
+                  Today's Focus
+                </Text>
+              </View>
               <TextInput
-                style={[styles.focusInput, { color: colors.textPrimary }]}
+                style={[styles.focusInput, {
+                  color: colors.textPrimary,
+                  borderColor: colors.border,
+                  backgroundColor: isDark ? colors.background : '#F8F9FF',
+                }]}
                 placeholder="Write one sentence about today..."
                 placeholderTextColor={colors.textMuted}
                 value={focusNote}
@@ -75,31 +91,38 @@ export default function HomeScreen() {
               />
             </View>
 
-            {/* Goals Header */}
+            {/* Goals */}
             <View style={[styles.card, {
               backgroundColor: colors.surface,
               borderColor: colors.border,
               borderLeftColor: colors.indigo,
             }]}>
-              <Text style={[styles.cardLabel, { color: colors.indigo }]}>
-                Today's Goals
-              </Text>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconBadge, { backgroundColor: colors.indigo + '20' }]}>
+                  <Text style={styles.cardIcon}>🎯</Text>
+                </View>
+                <Text style={[styles.cardLabel, { color: colors.indigo }]}>
+                  Today's Goals
+                </Text>
+                <Text style={[styles.goalCount, { color: colors.textMuted }]}>
+                  {goals.filter(g => g.done).length}/{goals.length}
+                </Text>
+              </View>
             </View>
           </>
         }
         renderItem={({ item, index }) => (
           <TouchableOpacity
-            style={styles.goalRow}
+            style={[styles.goalRow, { borderBottomColor: colors.border }]}
             onPress={() => toggleGoal(index)}
+            activeOpacity={0.7}
           >
             <View style={[
               styles.checkbox,
               { borderColor: colors.indigo },
-              item.done && { backgroundColor: colors.indigo }
+              item.done && { backgroundColor: colors.indigo, borderColor: colors.indigo }
             ]}>
-              {item.done && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
+              {item.done && <Text style={styles.checkmark}>✓</Text>}
             </View>
             <Text style={[
               styles.goalText,
@@ -115,8 +138,9 @@ export default function HomeScreen() {
             {/* Add Goal */}
             {goals.length < 3 && (
               <TouchableOpacity
-                style={styles.addGoalBtn}
+                style={[styles.addGoalBtn, { borderColor: colors.indigo + '40' }]}
                 onPress={() => setGoalModalVisible(true)}
+                activeOpacity={0.7}
               >
                 <Text style={[styles.addGoalText, { color: colors.indigo }]}>
                   + Add goal
@@ -131,30 +155,39 @@ export default function HomeScreen() {
                 borderColor: colors.border,
                 borderLeftColor: colors.amber,
               }]}>
-                <Text style={[styles.cardLabel, { color: colors.amber }]}>
-                  Quick Access
-                </Text>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
+                    <Text style={styles.cardIcon}>📌</Text>
+                  </View>
+                  <Text style={[styles.cardLabel, { color: colors.amber }]}>Quick Access</Text>
+                </View>
                 {pinnedItems.map((item, i) => (
-                  <View key={i} style={[styles.pinRow, { borderBottomColor: colors.border }]}>
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.pinRow, { borderBottomColor: colors.border }]}
+                    activeOpacity={0.7}
+                  >
                     <Text style={[styles.pinText, { color: colors.textPrimary }]}>
                       {'title' in item ? (item as any).title : (item as any).name}
                     </Text>
-                  </View>
+                    <Text style={[styles.pinArrow, { color: colors.textMuted }]}>›</Text>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
 
-            {/* Stats */}
+            {/* Stats Row */}
             <View style={styles.statsRow}>
               {[
-                { label: 'Files', value: files.length, color: colors.amber },
-                { label: 'Books', value: books.length, color: colors.amber },
-                { label: 'Playlists', value: playlists.length, color: colors.amber },
+                { label: 'Files', value: files.length, color: colors.amber, icon: '📁' },
+                { label: 'Books', value: books.length, color: colors.amber, icon: '📚' },
+                { label: 'Playlists', value: playlists.length, color: colors.indigo, icon: '🎬' },
               ].map((stat) => (
                 <View key={stat.label} style={[styles.statCard, {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
                 }]}>
+                  <Text style={styles.statIcon}>{stat.icon}</Text>
                   <Text style={[styles.statNumber, { color: stat.color }]}>
                     {stat.value}
                   </Text>
@@ -178,21 +211,29 @@ export default function HomeScreen() {
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               Add Goal
             </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>
+              What do you want to achieve today?
+            </Text>
             <TextInput
               style={[styles.modalInput, {
                 backgroundColor: colors.background,
                 borderColor: colors.border,
                 color: colors.textPrimary,
               }]}
-              placeholder="What do you want to achieve today?"
+              placeholder="e.g. Complete 2 chapters of my book"
               placeholderTextColor={colors.textMuted}
               value={newGoalText}
               onChangeText={setNewGoalText}
               autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleAddGoal}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                style={[styles.cancelBtn, {
+                  borderColor: colors.border,
+                  minHeight: 48,
+                }]}
                 onPress={() => { setGoalModalVisible(false); setNewGoalText(''); }}
               >
                 <Text style={[styles.cancelBtnText, { color: colors.textMuted }]}>
@@ -200,47 +241,177 @@ export default function HomeScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmBtn, { backgroundColor: colors.indigo }]}
+                style={[styles.confirmBtn, {
+                  backgroundColor: colors.indigo,
+                  minHeight: 48,
+                }]}
                 onPress={handleAddGoal}
               >
-                <Text style={styles.confirmBtnText}>Add</Text>
+                <Text style={styles.confirmBtnText}>Add Goal</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
-  greeting: { fontSize: 26, fontWeight: 'bold' },
-  subtitle: { fontSize: 15, marginTop: 4 },
-  card: { borderRadius: 12, padding: 16, marginHorizontal: 20, marginBottom: 8, borderWidth: 1, borderLeftWidth: 3 },
-  cardLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  focusInput: { fontSize: 15, lineHeight: 22 },
-  goalRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, gap: 12 },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  checkmark: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
-  goalText: { fontSize: 15, flex: 1 },
+  scrollContent: { paddingBottom: 32 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  greeting: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+  date: { fontSize: 14, marginTop: 4, fontWeight: '400' },
+  card: {
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderLeftWidth: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIcon: { fontSize: 16 },
+  cardLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    flex: 1,
+  },
+  goalCount: { fontSize: 13, fontWeight: '600' },
+  focusInput: {
+    fontSize: 15,
+    lineHeight: 24,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    minHeight: 64,
+    textAlignVertical: 'top',
+  },
+  goalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 14,
+    borderBottomWidth: 1,
+    minHeight: 48,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: { color: '#FFFFFF', fontSize: 13, fontWeight: 'bold' },
+  goalText: { fontSize: 15, flex: 1, lineHeight: 22 },
   goalDone: { textDecorationLine: 'line-through' },
-  addGoalBtn: { marginHorizontal: 20, marginBottom: 8, padding: 8 },
+  addGoalBtn: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    marginTop: 4,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
   addGoalText: { fontSize: 15, fontWeight: '600' },
-  pinRow: { paddingVertical: 10, borderBottomWidth: 1 },
-  pinText: { fontSize: 15 },
-  statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 32, marginTop: 8 },
-  statCard: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1 },
-  statNumber: { fontSize: 24, fontWeight: 'bold' },
-  statLabel: { fontSize: 12, marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: '#00000099', alignItems: 'center', justifyContent: 'center' },
-  modalBox: { borderRadius: 16, padding: 24, width: '85%', borderWidth: 1 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
-  modalInput: { borderRadius: 10, padding: 14, fontSize: 15, borderWidth: 1, marginBottom: 16 },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1 },
-  cancelBtnText: { fontSize: 15 },
-  confirmBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  pinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    minHeight: 48,
+  },
+  pinText: { fontSize: 15, flex: 1 },
+  pinArrow: { fontSize: 20 },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    gap: 4,
+  },
+  statIcon: { fontSize: 20 },
+  statNumber: { fontSize: 22, fontWeight: '700' },
+  statLabel: { fontSize: 12, fontWeight: '500' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000099',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalBox: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    borderWidth: 1,
+    gap: 12,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '700' },
+  modalSubtitle: { fontSize: 14, lineHeight: 20, marginTop: -4 },
+  modalInput: {
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    borderWidth: 1,
+    minHeight: 48,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  cancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '500' },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  confirmBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });
