@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/store';
 import AppListScreen from './locker/AppListScreen';
 import LockSetupScreen, { LockConfig } from './locker/LockSetupScreen';
+import LockAnimation from '../components/locker/LockAnimation';
 
 type Screen = 'main' | 'appList' | 'lockSetup';
 
@@ -18,6 +19,8 @@ export default function LockerScreen() {
   const { lockedApps, addLockedApp, removeLockedApp } = useAppStore();
   const [screen, setScreen] = useState<Screen>('main');
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
+  const [lockAnimVisible, setLockAnimVisible] = useState(false);
+  const [animatingAppName, setAnimatingAppName] = useState('');
 
   const handleSelectApp = (app: AppInfo) => {
     setSelectedApp(app);
@@ -44,6 +47,13 @@ export default function LockerScreen() {
       cooldownExpiresAt: cooldownExpiry.toISOString(),
       isEditUnlocked: false,
     });
+    // Show animation before returning to main
+    setAnimatingAppName(config.appName);
+    setLockAnimVisible(true);
+  };
+
+  const handleAnimationFinish = () => {
+    setLockAnimVisible(false);
     setScreen('main');
     setSelectedApp(null);
   };
@@ -145,14 +155,12 @@ export default function LockerScreen() {
             const percent = getUsagePercent(item);
             const daysLeft = getDaysLeft(item);
             const isOver = percent >= 100;
-
             return (
               <View style={[styles.card, {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
                 borderLeftColor: isOver ? colors.destructive : colors.indigo,
               }]}>
-                {/* Top Row */}
                 <View style={styles.cardTop}>
                   <View style={[styles.appIcon, { backgroundColor: colors.indigo + '20' }]}>
                     <Text style={styles.appIconText}>{item.appName.charAt(0)}</Text>
@@ -189,8 +197,6 @@ export default function LockerScreen() {
                     <Text style={[styles.removeBtnText, { color: colors.destructive }]}>✕</Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* Progress */}
                 <View style={styles.progressSection}>
                   <View style={styles.progressLabelRow}>
                     <Text style={[styles.progressLabel, { color: colors.textMuted }]}>
@@ -227,6 +233,13 @@ export default function LockerScreen() {
           <Text style={styles.fabIcon}>+</Text>
         </TouchableOpacity>
       )}
+
+      {/* Lock Animation */}
+      <LockAnimation
+        visible={lockAnimVisible}
+        appName={animatingAppName}
+        onFinish={handleAnimationFinish}
+      />
     </SafeAreaView>
   );
 }
@@ -244,54 +257,33 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
   subtitle: { fontSize: 14, marginTop: 2 },
   headerBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerBadgeIcon: { fontSize: 22 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    marginBottom: 4,
+    width: 80, height: 80, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, marginBottom: 4,
   },
   emptyIcon: { fontSize: 36 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    fontStyle: 'italic',
-  },
+  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 22, fontStyle: 'italic' },
   emptyActionBtn: {
-    marginTop: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    minHeight: 48,
+    marginTop: 8, paddingVertical: 14,
+    paddingHorizontal: 32, borderRadius: 12, minHeight: 48,
   },
   emptyActionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   list: { padding: 16, paddingBottom: 100 },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderLeftWidth: 3,
+    borderRadius: 16, padding: 16,
+    marginBottom: 10, borderWidth: 1, borderLeftWidth: 3,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   appIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
   appIconText: { fontSize: 22, fontWeight: '700', color: '#6366F1' },
   appInfo: { flex: 1 },
@@ -300,11 +292,8 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   badgeText: { fontSize: 12, fontWeight: '600' },
   removeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
   removeBtnText: { fontSize: 16, fontWeight: '700' },
   progressSection: { gap: 8 },
@@ -314,19 +303,12 @@ const styles = StyleSheet.create({
   progressBar: { height: 8, borderRadius: 999, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 999 },
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#6366F1',
+    position: 'absolute', bottom: 24, right: 20,
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 4, shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.3, shadowRadius: 8,
   },
   fabIcon: { color: '#FFFFFF', fontSize: 28, fontWeight: '300' },
 });

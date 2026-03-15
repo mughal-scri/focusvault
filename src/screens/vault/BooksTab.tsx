@@ -3,10 +3,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
 import { openFile, saveFilePermanently } from '../../utils/fileUtils';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 export default function BooksTab() {
   const { colors } = useTheme();
   const { books, addBook, removeBook, updateBook } = useAppStore();
+  const { toast, showToast, hideToast } = useToast();
 
   const pickBook = async () => {
     try {
@@ -34,6 +37,7 @@ export default function BooksTab() {
           lastPage: null,
           totalPages: null,
         });
+        showToast('Book added to vault', 'success');
       }
     } catch {
       Alert.alert('Error', 'Could not add book.');
@@ -50,10 +54,13 @@ export default function BooksTab() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Yes, Completed!',
-        onPress: () => updateBook(id, {
-          isCompleted: true,
-          lastReadAt: new Date().toISOString(),
-        }),
+        onPress: () => {
+          updateBook(id, {
+            isCompleted: true,
+            lastReadAt: new Date().toISOString(),
+          });
+          showToast('Well done. Book completed! 📚', 'success');
+        },
       },
     ]);
   };
@@ -61,13 +68,22 @@ export default function BooksTab() {
   const confirmDelete = (id: string, name: string) => {
     Alert.alert('Remove Book', `Remove "${name}" from vault?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeBook(id) },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          removeBook(id);
+          showToast('Book removed', 'info');
+        }
+      },
     ]);
   };
 
   const getLastReadLabel = (lastReadAt: string | null) => {
     if (!lastReadAt) return 'Not opened yet';
-    const diffDays = Math.floor((Date.now() - new Date(lastReadAt).getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(
+      (Date.now() - new Date(lastReadAt).getTime()) / (1000 * 60 * 60 * 24)
+    );
     if (diffDays === 0) return 'Read today';
     if (diffDays === 1) return 'Read yesterday';
     return `Read ${diffDays} days ago`;
@@ -77,7 +93,10 @@ export default function BooksTab() {
     <View style={styles.container}>
       {books.length === 0 ? (
         <View style={styles.empty}>
-          <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.emptyIconContainer, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }]}>
             <Text style={styles.emptyIcon}>📚</Text>
           </View>
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
@@ -99,16 +118,15 @@ export default function BooksTab() {
               borderColor: colors.border,
               opacity: item.isCompleted ? 0.7 : 1,
             }]}>
-              {/* Book Icon */}
               <View style={[styles.bookIconContainer, {
-                backgroundColor: item.isCompleted ? colors.success + '15' : colors.amber + '15'
+                backgroundColor: item.isCompleted
+                  ? colors.success + '15'
+                  : colors.amber + '15',
               }]}>
                 <Text style={styles.bookIcon}>
                   {item.isCompleted ? '✅' : '📖'}
                 </Text>
               </View>
-
-              {/* Info */}
               <View style={styles.bookInfo}>
                 <Text style={[styles.bookName, { color: colors.textPrimary }]} numberOfLines={2}>
                   {item.fileName}
@@ -118,8 +136,6 @@ export default function BooksTab() {
                 }]}>
                   {item.isCompleted ? '✓ Completed' : getLastReadLabel(item.lastReadAt)}
                 </Text>
-
-                {/* Action Buttons */}
                 <View style={styles.actions}>
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: colors.indigo }]}
@@ -139,7 +155,9 @@ export default function BooksTab() {
                     style={[styles.actionBtn, { backgroundColor: colors.destructive + '15' }]}
                     onPress={() => confirmDelete(item.id, item.fileName)}
                   >
-                    <Text style={[styles.actionBtnText, { color: colors.destructive }]}>Remove</Text>
+                    <Text style={[styles.actionBtnText, { color: colors.destructive }]}>
+                      Remove
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -155,6 +173,14 @@ export default function BooksTab() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        visible={toast.visible}
+        type={toast.type}
+        onHide={hideToast}
+      />
     </View>
   );
 }
@@ -163,32 +189,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    width: 80, height: 80, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
   emptyIcon: { fontSize: 36 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 22, fontStyle: 'italic' },
   list: { padding: 16, paddingBottom: 100 },
   card: {
-    flexDirection: 'row',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    gap: 12,
-    minHeight: 80,
+    flexDirection: 'row', borderRadius: 16,
+    padding: 14, marginBottom: 10,
+    borderWidth: 1, gap: 12, minHeight: 80,
   },
   bookIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 52, height: 52, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
   bookIcon: { fontSize: 24 },
   bookInfo: { flex: 1 },
@@ -196,27 +211,17 @@ const styles = StyleSheet.create({
   lastRead: { fontSize: 13, marginBottom: 10 },
   actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   actionBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    minHeight: 32,
-    justifyContent: 'center',
+    paddingVertical: 6, paddingHorizontal: 14,
+    borderRadius: 8, minHeight: 32, justifyContent: 'center',
   },
   actionBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#F59E0B',
+    position: 'absolute', bottom: 24, right: 20,
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 4, shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.3, shadowRadius: 8,
   },
   fabIcon: { color: '#0A0A0F', fontSize: 28, fontWeight: '300' },
 });

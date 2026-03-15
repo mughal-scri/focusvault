@@ -6,6 +6,8 @@ import {
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const getYoutubeThumbnail = (url: string): string | null => {
   const patterns = [
@@ -22,6 +24,7 @@ const getYoutubeThumbnail = (url: string): string | null => {
 export default function PlaylistsTab() {
   const { colors } = useTheme();
   const { playlists, addPlaylist, completePlaylist, removePlaylist, updatePlaylist } = useAppStore();
+  const { toast, showToast, hideToast } = useToast();
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export default function PlaylistsTab() {
     });
     setTitle(''); setUrl('');
     setAddModalVisible(false);
+    showToast('Playlist added to vault', 'success');
   };
 
   const handleRename = () => {
@@ -51,6 +55,7 @@ export default function PlaylistsTab() {
     updatePlaylist(selectedId, { title: renameText.trim() });
     setRenameText(''); setSelectedId(null);
     setRenameModalVisible(false);
+    showToast('Playlist renamed', 'info');
   };
 
   const openRenameModal = (id: string, currentTitle: string) => {
@@ -79,7 +84,14 @@ export default function PlaylistsTab() {
   const confirmRemove = (id: string) => {
     Alert.alert('Remove Playlist', 'Remove this playlist from vault?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removePlaylist(id) },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          removePlaylist(id);
+          showToast('Playlist removed', 'info');
+        }
+      },
     ]);
   };
 
@@ -124,7 +136,6 @@ export default function PlaylistsTab() {
               borderColor: colors.border,
               opacity: item.isCompleted ? 0.65 : 1,
             }]}>
-              {/* Top Row */}
               <View style={styles.cardTop}>
                 {item.thumbnailUrl ? (
                   <Image
@@ -154,7 +165,6 @@ export default function PlaylistsTab() {
                 </View>
               </View>
 
-              {/* Actions */}
               <View style={[styles.actionsRow, { borderTopColor: colors.border }]}>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: colors.indigo }]}
@@ -177,7 +187,10 @@ export default function PlaylistsTab() {
                 {!item.isCompleted && (
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: colors.success }]}
-                    onPress={() => completePlaylist(item.id)}
+                    onPress={() => {
+                      completePlaylist(item.id);
+                      showToast('Well done. 🎉', 'success');
+                    }}
                   >
                     <Text style={styles.actionBtnText}>✓ Done</Text>
                   </TouchableOpacity>
@@ -199,9 +212,7 @@ export default function PlaylistsTab() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-              Add Playlist
-            </Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add Playlist</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>
               Paste a YouTube URL to add it to your vault
             </Text>
@@ -297,6 +308,14 @@ export default function PlaylistsTab() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        visible={toast.visible}
+        type={toast.type}
+        onHide={hideToast}
+      />
     </View>
   );
 }
@@ -326,18 +345,12 @@ const styles = StyleSheet.create({
   completedBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   completedBadgeText: { fontSize: 12, fontWeight: '600' },
   actionsRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-    paddingTop: 12,
-    borderTopWidth: 1,
+    flexDirection: 'row', gap: 6, flexWrap: 'wrap',
+    paddingTop: 12, borderTopWidth: 1,
   },
   actionBtn: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    minHeight: 34,
-    justifyContent: 'center',
+    paddingVertical: 7, paddingHorizontal: 12,
+    borderRadius: 8, minHeight: 34, justifyContent: 'center',
   },
   actionBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
   completedSection: { paddingTop: 16, paddingHorizontal: 4, borderTopWidth: 1 },
@@ -359,10 +372,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '700' },
   modalSubtitle: { fontSize: 14, lineHeight: 20, marginTop: -4 },
   modalFields: { gap: 10 },
-  input: {
-    borderRadius: 12, padding: 14, fontSize: 15,
-    borderWidth: 1, minHeight: 48,
-  },
+  input: { borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1, minHeight: 48 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   modalCancelBtn: {
     flex: 1, borderRadius: 12, borderWidth: 1,
@@ -380,8 +390,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 24, right: 20,
     width: 56, height: 56, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#6366F1',
+    elevation: 4, shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8,
   },

@@ -7,10 +7,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAppStore } from '../../store/store';
 import { openFile, saveFilePermanently } from '../../utils/fileUtils';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 export default function FilesTab() {
   const { colors } = useTheme();
   const { files, addFile, removeFile } = useAppStore();
+  const { toast, showToast, hideToast } = useToast();
   const [search, setSearch] = useState('');
 
   const filtered = files.filter((f) =>
@@ -44,6 +47,7 @@ export default function FilesTab() {
           pdfLastPage: null,
           addedAt: new Date().toISOString(),
         });
+        showToast('File added to vault', 'success');
       }
     } catch {
       Alert.alert('Error', 'Could not add file.');
@@ -53,7 +57,14 @@ export default function FilesTab() {
   const confirmDelete = (id: string, name: string) => {
     Alert.alert('Remove File', `Remove "${name}" from vault?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeFile(id) },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          removeFile(id);
+          showToast('File removed', 'info');
+        }
+      },
     ]);
   };
 
@@ -72,7 +83,10 @@ export default function FilesTab() {
     <View style={styles.container}>
       {/* Search */}
       <View style={[styles.searchWrapper, { backgroundColor: colors.background }]}>
-        <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.searchBar, {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }]}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -91,7 +105,10 @@ export default function FilesTab() {
 
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.emptyIconContainer, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }]}>
             <Text style={styles.emptyIcon}>📁</Text>
           </View>
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
@@ -130,7 +147,7 @@ export default function FilesTab() {
                     style={[styles.iconBtn, { backgroundColor: colors.indigo + '15' }]}
                     onPress={() => openFile(item.localUri)}
                   >
-                    <Text style={styles.iconBtnText}>↗</Text>
+                    <Text style={[styles.iconBtnText, { color: colors.indigo }]}>↗</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.iconBtn, { backgroundColor: colors.destructive + '15' }]}
@@ -153,6 +170,14 @@ export default function FilesTab() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        visible={toast.visible}
+        type={toast.type}
+        onHide={hideToast}
+      />
     </View>
   );
 }
@@ -161,46 +186,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   searchWrapper: { padding: 16, paddingBottom: 8 },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    minHeight: 48,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1,
+    paddingHorizontal: 14, minHeight: 48, gap: 8,
   },
   searchIcon: { fontSize: 16 },
   searchInput: { flex: 1, fontSize: 15 },
   clearBtn: { fontSize: 16, padding: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+    width: 80, height: 80, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
   emptyIcon: { fontSize: 36 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
   list: { padding: 16, paddingBottom: 100 },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    gap: 12,
-    minHeight: 72,
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, gap: 12, minHeight: 72,
   },
   fileIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 48, height: 48, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
   fileIcon: { fontSize: 22 },
   fileInfo: { flex: 1 },
@@ -208,27 +217,17 @@ const styles = StyleSheet.create({
   fileMeta: { fontSize: 13, marginTop: 2 },
   cardActions: { flexDirection: 'row', gap: 8 },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  iconBtnText: { fontSize: 16, fontWeight: '700', color: '#6366F1' },
+  iconBtnText: { fontSize: 16, fontWeight: '700' },
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#F59E0B',
+    position: 'absolute', bottom: 24, right: 20,
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 4, shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.3, shadowRadius: 8,
   },
   fabIcon: { color: '#0A0A0F', fontSize: 28, fontWeight: '300' },
 });
