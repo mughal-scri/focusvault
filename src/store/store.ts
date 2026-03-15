@@ -58,8 +58,8 @@ interface AppState {
   focusNote: string;
   goals: { text: string; done: boolean }[];
   currentStreak: number;
-  userProfile: { name: string; age: number | null } | null;
 
+  userProfile: { name: string; age: number | null } | null;
   setUserProfile: (profile: { name: string; age: number | null }) => void;
   addFile: (file: VaultFile) => void;
   removeFile: (id: string) => void;

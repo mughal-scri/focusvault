@@ -8,7 +8,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/store';
 
 interface Props {
-  onFinish: () => void;
+  onFinish: () => void | Promise<void>;
 }
 
 export default function SetupScreen({ onFinish }: Props) {
@@ -18,14 +18,19 @@ export default function SetupScreen({ onFinish }: Props) {
   const [age, setAge] = useState('');
   const [nameError, setNameError] = useState('');
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!name.trim()) {
       setNameError('Please enter your name to continue.');
       return;
     }
     setNameError('');
-    setUserProfile({ name: name.trim(), age: age ? parseInt(age) : null });
-    onFinish();
+    try {
+      setUserProfile({ name: name.trim(), age: age ? parseInt(age) : null });
+      await onFinish();
+    } catch (e) {
+      console.error('Setup error:', e);
+      onFinish();
+    }
   };
 
   return (
