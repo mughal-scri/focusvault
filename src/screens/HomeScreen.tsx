@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
-  FlatList, Modal, StyleSheet, Dimensions
+  Modal, StyleSheet, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAppStore } from '../store/store';
 import StreakCard from '../components/home/StreakCard';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
@@ -40,166 +38,173 @@ export default function HomeScreen() {
   ].slice(0, 4);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <FlatList
-        data={goals}
-        keyExtractor={(_, i) => i.toString()}
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        ListHeaderComponent={
-          <>
-            {/* Header */}
-            <View style={styles.header}>
-              <View>
-                <Text style={[styles.greeting, { color: colors.textPrimary }]}>
-                  {getGreeting()}{userProfile?.name ? `, ${userProfile.name}` : ''} 👋
-                </Text>
-                <Text style={[styles.date, { color: colors.textMuted }]}>
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </Text>
-              </View>
-            </View>
-
-            {/* Streak Card */}
-            <StreakCard />
-
-            {/* Focus Note */}
-            <View style={[styles.card, {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderLeftColor: colors.amber,
-            }]}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
-                  <Text style={styles.cardIcon}>✏️</Text>
-                </View>
-                <Text style={[styles.cardLabel, { color: colors.amber }]}>
-                  Today's Focus
-                </Text>
-              </View>
-              <TextInput
-                style={[styles.focusInput, {
-                  color: colors.textPrimary,
-                  borderColor: colors.border,
-                  backgroundColor: isDark ? colors.background : '#F8F9FF',
-                }]}
-                placeholder="Write one sentence about today..."
-                placeholderTextColor={colors.textMuted}
-                value={focusNote}
-                onChangeText={setFocusNote}
-                multiline
-              />
-            </View>
-
-            {/* Goals */}
-            <View style={[styles.card, {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderLeftColor: colors.indigo,
-            }]}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.cardIconBadge, { backgroundColor: colors.indigo + '20' }]}>
-                  <Text style={styles.cardIcon}>🎯</Text>
-                </View>
-                <Text style={[styles.cardLabel, { color: colors.indigo }]}>
-                  Today's Goals
-                </Text>
-                <Text style={[styles.goalCount, { color: colors.textMuted }]}>
-                  {goals.filter(g => g.done).length}/{goals.length}
-                </Text>
-              </View>
-            </View>
-          </>
-        }
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={[styles.goalRow, { borderBottomColor: colors.border }]}
-            onPress={() => toggleGoal(index)}
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.checkbox,
-              { borderColor: colors.indigo },
-              item.done && { backgroundColor: colors.indigo, borderColor: colors.indigo }
-            ]}>
-              {item.done && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <Text style={[
-              styles.goalText,
-              { color: item.done ? colors.textMuted : colors.textPrimary },
-              item.done && styles.goalDone
-            ]}>
-              {item.text}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.greeting, { color: colors.textPrimary }]}>
+              {getGreeting()}{userProfile?.name ? `, ${userProfile.name}` : ''} 👋
             </Text>
-          </TouchableOpacity>
-        )}
-        ListFooterComponent={
-          <>
-            {/* Add Goal */}
-            {goals.length < 3 && (
+            <Text style={[styles.date, { color: colors.textMuted }]}>
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric'
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Streak Card */}
+        <StreakCard />
+
+        {/* Focus Note */}
+        <View style={[styles.card, {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderLeftColor: colors.amber,
+        }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
+              <Text style={styles.cardIcon}>✏️</Text>
+            </View>
+            <Text style={[styles.cardLabel, { color: colors.amber }]}>
+              Today's Focus
+            </Text>
+          </View>
+          <TextInput
+            style={[styles.focusInput, {
+              color: colors.textPrimary,
+              borderColor: colors.border,
+              backgroundColor: isDark ? colors.background : '#F0F4FF',
+            }]}
+            placeholder="Write one sentence about today..."
+            placeholderTextColor={colors.textMuted}
+            value={focusNote}
+            onChangeText={setFocusNote}
+            multiline
+          />
+        </View>
+
+        {/* Goals Card */}
+        <View style={[styles.card, {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderLeftColor: colors.indigo,
+        }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconBadge, { backgroundColor: colors.indigo + '20' }]}>
+              <Text style={styles.cardIcon}>🎯</Text>
+            </View>
+            <Text style={[styles.cardLabel, { color: colors.indigo }]}>
+              Today's Goals
+            </Text>
+            <Text style={[styles.goalCount, { color: colors.textMuted }]}>
+              {goals.filter(g => g.done).length}/{goals.length}
+            </Text>
+          </View>
+
+          {/* Goals List — inside the card */}
+          {goals.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.goalRow, {
+                borderTopColor: colors.border,
+              }]}
+              onPress={() => toggleGoal(index)}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.checkbox,
+                { borderColor: colors.indigo },
+                item.done && { backgroundColor: colors.indigo, borderColor: colors.indigo }
+              ]}>
+                {item.done && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={[
+                styles.goalText,
+                { color: item.done ? colors.textMuted : colors.textPrimary },
+                item.done && styles.goalDone
+              ]}>
+                {item.text}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+          {/* Add Goal Button — inside the card */}
+          {goals.length < 3 && (
+            <TouchableOpacity
+              style={[styles.addGoalBtn, {
+                borderColor: colors.indigo + '40',
+                borderTopColor: goals.length > 0 ? colors.border : 'transparent',
+              }]}
+              onPress={() => setGoalModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.addGoalText, { color: colors.indigo }]}>
+                + Add goal
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Quick Pins */}
+        {pinnedItems.length > 0 && (
+          <View style={[styles.card, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderLeftColor: colors.amber,
+          }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
+                <Text style={styles.cardIcon}>📌</Text>
+              </View>
+              <Text style={[styles.cardLabel, { color: colors.amber }]}>
+                Quick Access
+              </Text>
+            </View>
+            {pinnedItems.map((item, i) => (
               <TouchableOpacity
-                style={[styles.addGoalBtn, { borderColor: colors.indigo + '40' }]}
-                onPress={() => setGoalModalVisible(true)}
+                key={i}
+                style={[styles.pinRow, { borderTopColor: colors.border }]}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.addGoalText, { color: colors.indigo }]}>
-                  + Add goal
+                <Text style={[styles.pinText, { color: colors.textPrimary }]}>
+                  {'title' in item ? (item as any).title : (item as any).name}
                 </Text>
+                <Text style={[styles.pinArrow, { color: colors.textMuted }]}>›</Text>
               </TouchableOpacity>
-            )}
+            ))}
+          </View>
+        )}
 
-            {/* Quick Pins */}
-            {pinnedItems.length > 0 && (
-              <View style={[styles.card, {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                borderLeftColor: colors.amber,
-              }]}>
-                <View style={styles.cardHeader}>
-                  <View style={[styles.cardIconBadge, { backgroundColor: colors.amber + '20' }]}>
-                    <Text style={styles.cardIcon}>📌</Text>
-                  </View>
-                  <Text style={[styles.cardLabel, { color: colors.amber }]}>Quick Access</Text>
-                </View>
-                {pinnedItems.map((item, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.pinRow, { borderBottomColor: colors.border }]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pinText, { color: colors.textPrimary }]}>
-                      {'title' in item ? (item as any).title : (item as any).name}
-                    </Text>
-                    <Text style={[styles.pinArrow, { color: colors.textMuted }]}>›</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Stats Row */}
-            <View style={styles.statsRow}>
-              {[
-                { label: 'Files', value: files.length, color: colors.amber, icon: '📁' },
-                { label: 'Books', value: books.length, color: colors.amber, icon: '📚' },
-                { label: 'Playlists', value: playlists.length, color: colors.indigo, icon: '🎬' },
-              ].map((stat) => (
-                <View key={stat.label} style={[styles.statCard, {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                }]}>
-                  <Text style={styles.statIcon}>{stat.icon}</Text>
-                  <Text style={[styles.statNumber, { color: stat.color }]}>
-                    {stat.value}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.textMuted }]}>
-                    {stat.label}
-                  </Text>
-                </View>
-              ))}
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          {[
+            { label: 'Files', value: files.length, color: colors.amber, icon: '📁' },
+            { label: 'Books', value: books.length, color: colors.amber, icon: '📚' },
+            { label: 'Playlists', value: playlists.length, color: colors.indigo, icon: '🎬' },
+          ].map((stat) => (
+            <View key={stat.label} style={[styles.statCard, {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            }]}>
+              <Text style={styles.statIcon}>{stat.icon}</Text>
+              <Text style={[styles.statNumber, { color: stat.color }]}>
+                {stat.value}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+                {stat.label}
+              </Text>
             </View>
-          </>
-        }
-      />
+          ))}
+        </View>
+      </ScrollView>
 
       {/* Add Goal Modal */}
       <Modal visible={goalModalVisible} transparent animationType="fade">
@@ -234,7 +239,10 @@ export default function HomeScreen() {
                   borderColor: colors.border,
                   minHeight: 48,
                 }]}
-                onPress={() => { setGoalModalVisible(false); setNewGoalText(''); }}
+                onPress={() => {
+                  setGoalModalVisible(false);
+                  setNewGoalText('');
+                }}
               >
                 <Text style={[styles.cancelBtnText, { color: colors.textMuted }]}>
                   Cancel
@@ -261,15 +269,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 32 },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
   },
   greeting: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
-  date: { fontSize: 14, marginTop: 4, fontWeight: '400' },
+  date: { fontSize: 14, marginTop: 4 },
   card: {
     borderRadius: 16,
     padding: 16,
@@ -285,8 +290,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardIconBadge: {
-    width: 32,
-    height: 32,
+    width: 32, height: 32,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,15 +316,13 @@ const styles = StyleSheet.create({
   goalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 14,
     gap: 14,
-    borderBottomWidth: 1,
-    minHeight: 48,
+    borderTopWidth: 1,
+    minHeight: 52,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 24, height: 24,
     borderRadius: 7,
     borderWidth: 2,
     alignItems: 'center',
@@ -330,15 +332,10 @@ const styles = StyleSheet.create({
   goalText: { fontSize: 15, flex: 1, lineHeight: 22 },
   goalDone: { textDecorationLine: 'line-through' },
   addGoalBtn: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    marginTop: 4,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+    paddingVertical: 14,
+    borderTopWidth: 1,
     alignItems: 'center',
-    minHeight: 48,
+    minHeight: 50,
     justifyContent: 'center',
   },
   addGoalText: { fontSize: 15, fontWeight: '600' },
@@ -346,7 +343,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    borderTopWidth: 1,
     minHeight: 48,
   },
   pinText: { fontSize: 15, flex: 1 },

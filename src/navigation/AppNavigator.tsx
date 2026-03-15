@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import HomeScreen from '../screens/HomeScreen';
 import VaultScreen from '../screens/VaultScreen';
@@ -17,6 +18,7 @@ const TAB_ICONS: Record<string, string> = {
 
 export default function AppNavigator() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isReady, setIsReady] = useState(false);
   const [initialState, setInitialState] = useState();
 
@@ -61,18 +63,18 @@ export default function AppNavigator() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
-            height: 64,
-            paddingBottom: 8,
+            height: 64 + insets.bottom,
+            paddingBottom: insets.bottom + 8,
             paddingTop: 8,
           },
           tabBarActiveTintColor: route.name === 'Vault' ? colors.amber : colors.indigo,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarLabel: ({ focused, color }) => (
+          tabBarLabel: ({ focused, color }: { focused: boolean; color: string }) => (
             <Text style={{ color, fontSize: 11, fontWeight: focused ? '700' : '500' }}>
               {route.name}
             </Text>
           ),
-          tabBarIcon: ({ focused, color }) => (
+          tabBarIcon: ({ focused, color }: { focused: boolean; color: string }) => (
             <View style={[
               styles.iconContainer,
               focused && {
